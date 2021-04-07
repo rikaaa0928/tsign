@@ -2,6 +2,8 @@ package worker
 
 import (
 	"bytes"
+	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -9,6 +11,8 @@ import (
 	"net/url"
 	"os"
 	"path"
+	"regexp"
+	"strconv"
 	"strings"
 )
 
@@ -51,7 +55,7 @@ func NewUser(file string) *User {
 		log.Printf("Verifying imported cookies from %s...", file)
 		URL, _ := url.Parse("http://baidu.com")
 		u.cookieJar.SetCookies(URL, cookies)
-		u.valid = GetLoginStatus(u.cookieJar)
+		u.valid = u.IsLogIn()
 		log.Printf("%v\n", u.valid)
 	}
 	return u
@@ -63,4 +67,80 @@ func (u User) IsValid() bool {
 
 func (u User) Cookie() *cookiejar.Jar {
 	return u.cookieJar
+}
+
+func (u *User) IsLogIn() bool {
+	body, err := Fetch("http://tieba.baidu.com/dc/common/tbs", nil, u.cookieJar)
+	if err != nil {
+		return false
+	}
+	m := make(map[string]interface{})
+	err = json.Unmarshal(body, &m)
+	if err != nil {
+		return false
+	}
+	v, ok := m["is_login"]
+	if !ok {
+		return false
+	}
+	_, ok = v.(float64)
+	if ok {
+		return true
+	}
+	s, ok := v.(string)
+	if !ok {
+		return false
+	}
+	_, err = strconv.Atoi(s)
+	if err != nil {
+		return false
+	}
+	return true
+}
+
+func (u *User) GetList() ([]*data, error) {
+	pn := 0
+	list := make([]*data, 0)
+	for {
+		pn++
+		urlStr := "http://tieba.baidu.com/f/like/mylike?pn=" + fmt.Sprintf("%d", pn)
+		body, fetchErr := Fetch(urlStr, nil, u.cookieJar)
+		if fetchErr != nil {
+			return nil, fetchErr
+		}
+		reg := regexp.MustCompile("<tr><td>.+?</tr>")
+		allTr := reg.FindAllString(string(body), -1)
+		for _, line := range allTr {
+			nData := NewData(line)
+			if nData == nil {
+				continue
+			}
+			list = append(list, nData)
+		}
+		if allTr == nil {
+			break
+		}
+	}
+	return list, nil
+}
+
+func (u User) GetTBS() string {
+	body, err := Fetch("http://tieba.baidu.com/dc/common/tbs", nil, u.cookieJar)
+	if err != nil {
+		return ""
+	}
+	m := make(map[string]interface{})
+	err = json.Unmarshal(body, &m)
+	if err != nil {
+		return ""
+	}
+	v, ok := m["tbs"]
+	if !ok {
+		return ""
+	}
+	str, ok := v.(string)
+	if !ok {
+		return ""
+	}
+	return str
 }
