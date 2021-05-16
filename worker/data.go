@@ -1,6 +1,7 @@
 package worker
 
 import (
+	"fmt"
 	"regexp"
 	"strconv"
 )
@@ -27,4 +28,15 @@ func NewData(html string) *data {
 	exp = regexp.MustCompile("balvid=\"(\\d+)\"")
 	d.id, _ = strconv.Atoi(exp.FindStringSubmatch(html)[1])
 	return &d
+}
+
+type ShowData struct {
+	Name  string
+	Exp   int
+	Tried int
+	Stat  string
+}
+
+func (d ShowData) String() string {
+	return fmt.Sprintf("%s: %s. exp: %d, tried %d times.", d.Name, d.Stat, d.Exp, d.Tried)
 }

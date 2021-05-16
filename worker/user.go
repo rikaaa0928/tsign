@@ -69,7 +69,10 @@ func (u User) Cookie() *cookiejar.Jar {
 	return u.cookieJar
 }
 
-func (u *User) IsLogIn() bool {
+func (u *User) IsLogIn() (r bool) {
+	defer func() {
+		u.valid = r
+	}()
 	body, err := Fetch("http://tieba.baidu.com/dc/common/tbs", nil, u.cookieJar)
 	if err != nil {
 		return false
