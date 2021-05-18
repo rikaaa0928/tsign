@@ -12,6 +12,7 @@ type data struct {
 	unicodeName string
 	exp         int
 	tried       int
+	done        bool
 }
 
 func NewData(html string) *data {
@@ -35,6 +36,7 @@ type ShowData struct {
 	Exp   int
 	Tried int
 	Stat  string
+	Done  bool
 }
 
 func (d ShowData) String() string {

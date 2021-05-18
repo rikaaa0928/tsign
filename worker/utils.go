@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/md5"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -44,17 +45,24 @@ func Fetch(targetUrl string, postData map[string]string, ptrCookieJar *cookiejar
 	return body, nil
 }
 
-func Sign(u *User, d data) (r ShowData) {
+func Sign(u *User, d *data) (r ShowData) {
+	defer func(d *data) {
+		r.Done = d.done
+	}(d)
+	d.tried++
+	r.Exp = d.exp
+	r.Tried = d.tried
+	r.Name = d.name
 	postData := make(map[string]string)
-	postData["BDUSS"] = GetCookie(ptrCookieJar, "BDUSS")
+	postData["BDUSS"] = getCookie(u.cookieJar, "BDUSS")
 	postData["_client_id"] = "03-00-DA-59-05-00-72-96-06-00-01-00-04-00-4C-43-01-00-34-F4-02-00-BC-25-09-00-4E-36"
 	postData["_client_type"] = "4"
 	postData["_client_version"] = "1.2.1.17"
 	postData["_phone_imei"] = "540b43b59d21b7a4824e1fd31b08e9a6"
-	postData["fid"] = fmt.Sprintf("%d", tieba.TiebaId)
-	postData["kw"] = tieba.Name
+	postData["fid"] = fmt.Sprintf("%d", d.id)
+	postData["kw"] = d.name
 	postData["net_type"] = "3"
-	postData["tbs"] = getTbs(ptrCookieJar)
+	postData["tbs"] = u.GetTBS()
 
 	var keys []string
 	for key := range postData {
@@ -80,36 +88,50 @@ func Sign(u *User, d data) (r ShowData) {
 		r.Stat = fetchErr.Error()
 		return
 	}
-	json, parseErr := NewJson([]byte(body))
-	if parseErr != nil {
-		return 1, parseErr.Error(), 0
+	m := make(map[string]interface{})
+	err := json.Unmarshal(body, &m)
+	//json, parseErr := NewJson([]byte(body))
+	if err != nil {
+		r.Stat = err.Error()
+		return
 	}
-	if _exp, succeed := json.Get("user_info").CheckGet("sign_bonus_point"); succeed {
-		exp, _ := strconv.Atoi(_exp.MustString())
-		return 2, fmt.Sprintf("签到成功，获得经验值 %d", exp), exp
+	o1, ok := m["user_info"]
+	if !ok {
+		r.Stat = "error response structure user_info: " + string(body)
+		return
 	}
-	switch json.Get("error_code").MustString() {
-	case "340010":
-		fallthrough
-	case "160002":
-		fallthrough
-	case "3":
-		return 2, "你已经签到过了", 0
-	case "1":
-		fallthrough
-	case "340008": // 黑名单
-		fallthrough
-	case "340006": // 被封啦
-		fallthrough
-	case "160004":
-		return -1, fmt.Sprintf("ERROR-%s: %s", json.Get("error_code").MustString(), json.Get("error_msg").MustString()), 0
-	case "160003":
-		fallthrough
-	case "160008":
-		fallthrough
-	default:
-		return 1, fmt.Sprintf("ERROR-%s: %s", json.Get("error_code").MustString(), json.Get("error_msg").MustString()), 0
+	m1, ok := o1.(map[string]interface{})
+	if !ok {
+		r.Stat = "error response structure user_info map: " + string(body)
+		return
 	}
-	return -255, "", 0
+	expInt, ok := m1["sign_bonus_point"]
+	if ok {
+		expStr, ok := expInt.(string)
+		if !ok {
+			r.Stat = "error response structure sign_bonus_point string: " + string(body)
+			return
+		}
+		_, err = strconv.Atoi(expStr)
+		if err != nil {
+			r.Stat = "error response structure sign_bonus_point int: " + string(body)
+			return
+		}
+		d.done = true
+		r.Stat = "done and get exp: " + expStr
+		return
+	}
+	r.Stat = fmt.Sprintf("error code: %v, error msg: %v", m["error_code"], m["error_msg"])
 	return
+}
+
+func getCookie(cookieJar *cookiejar.Jar, name string) string {
+	cookieUrl, _ := url.Parse("http://tieba.baidu.com")
+	cookies := cookieJar.Cookies(cookieUrl)
+	for _, cookie := range cookies {
+		if name == cookie.Name {
+			return cookie.Value
+		}
+	}
+	return ""
 }
