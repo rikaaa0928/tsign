@@ -45,7 +45,7 @@ func Fetch(targetUrl string, postData map[string]string, ptrCookieJar *cookiejar
 	return body, nil
 }
 
-func Sign(u *User, d *data) (r ShowData) {
+func Sign(a *account, d *data) (r ShowData) {
 	defer func(d *data) {
 		r.Done = d.done
 	}(d)
@@ -54,7 +54,7 @@ func Sign(u *User, d *data) (r ShowData) {
 	r.Tried = d.tried
 	r.Name = d.name
 	postData := make(map[string]string)
-	postData["BDUSS"] = getCookie(u.cookieJar, "BDUSS")
+	postData["BDUSS"] = a.GetCookie("BDUSS")
 	postData["_client_id"] = "03-00-DA-59-05-00-72-96-06-00-01-00-04-00-4C-43-01-00-34-F4-02-00-BC-25-09-00-4E-36"
 	postData["_client_type"] = "4"
 	postData["_client_version"] = "1.2.1.17"
@@ -62,7 +62,7 @@ func Sign(u *User, d *data) (r ShowData) {
 	postData["fid"] = fmt.Sprintf("%d", d.id)
 	postData["kw"] = d.name
 	postData["net_type"] = "3"
-	postData["tbs"] = u.GetTBS()
+	postData["tbs"] = a.GetTBS()
 
 	var keys []string
 	for key := range postData {
@@ -83,7 +83,7 @@ func Sign(u *User, d *data) (r ShowData) {
 	hex.Encode(signValue, MD5Result)
 	postData["sign"] = strings.ToUpper(string(signValue))
 
-	body, fetchErr := Fetch("http://c.tieba.baidu.com/c/c/forum/sign", postData, u.cookieJar)
+	body, fetchErr := Fetch("http://c.tieba.baidu.com/c/c/forum/sign", postData, a.cookieJar)
 	if fetchErr != nil {
 		r.Stat = fetchErr.Error()
 		return
@@ -123,15 +123,4 @@ func Sign(u *User, d *data) (r ShowData) {
 	}
 	r.Stat = fmt.Sprintf("error code: %v, error msg: %v", m["error_code"], m["error_msg"])
 	return
-}
-
-func getCookie(cookieJar *cookiejar.Jar, name string) string {
-	cookieUrl, _ := url.Parse("http://tieba.baidu.com")
-	cookies := cookieJar.Cookies(cookieUrl)
-	for _, cookie := range cookies {
-		if name == cookie.Name {
-			return cookie.Value
-		}
-	}
-	return ""
 }
