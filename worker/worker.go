@@ -12,12 +12,26 @@ type worker struct {
 
 func (w *workerData) Do() {
 	s := Sign(w.act, w.d)
-	w.f(s)
+	if w.f != nil {
+		w.f(s)
+	}
 }
 
-func (w *worker) Go() {
+func (w *worker) SyncGo() {
 	for {
 		d := <-w.c
 		d.Do()
 	}
+}
+
+func (w *worker) AsyncGo() {
+	go w.SyncGo()
+}
+
+func (w *worker) AsyncNotify(d *workerData) {
+	go w.SyncNotify(d)
+}
+
+func (w *worker) SyncNotify(d *workerData) {
+	w.c <- d
 }
