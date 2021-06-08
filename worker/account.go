@@ -86,19 +86,19 @@ func (a *account) IsLogIn() (r bool) {
 	if !ok {
 		return false
 	}
-	_, ok = v.(float64)
+	f, ok := v.(float64)
 	if ok {
-		return true
+		return int(f) == 1
 	}
 	s, ok := v.(string)
 	if !ok {
 		return false
 	}
-	_, err = strconv.Atoi(s)
+	i, err := strconv.Atoi(s)
 	if err != nil {
 		return false
 	}
-	return true
+	return i == 1
 }
 
 func (a *account) GetList() ([]*data, error) {

@@ -20,7 +20,7 @@ func (w *workerData) Do() {
 func (w *worker) SyncGo() {
 	for {
 		d := <-w.c
-		d.Do()
+		go d.Do()
 	}
 }
 

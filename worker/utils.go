@@ -13,6 +13,9 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+
+	"golang.org/x/text/encoding/simplifiedchinese"
+	"golang.org/x/text/transform"
 )
 
 func Fetch(targetUrl string, postData map[string]string, ptrCookieJar *cookiejar.Jar) ([]byte, error) {
@@ -52,7 +55,7 @@ func Sign(a *account, d *data) (r ShowData) {
 	d.tried++
 	r.Exp = d.exp
 	r.Tried = d.tried
-	r.Name = d.name
+	r.Name = ToUtf8(d.name)
 	postData := make(map[string]string)
 	postData["BDUSS"] = a.GetCookie("BDUSS")
 	postData["_client_id"] = "03-00-DA-59-05-00-72-96-06-00-01-00-04-00-4C-43-01-00-34-F4-02-00-BC-25-09-00-4E-36"
@@ -123,4 +126,11 @@ func Sign(a *account, d *data) (r ShowData) {
 	}
 	r.Stat = fmt.Sprintf("error code: %v, error msg: %v", m["error_code"], m["error_msg"])
 	return
+}
+
+func ToUtf8(gbkString string) string {
+	I := bytes.NewReader([]byte(gbkString))
+	O := transform.NewReader(I, simplifiedchinese.GBK.NewDecoder())
+	d, _ := ioutil.ReadAll(O)
+	return string(d)
 }

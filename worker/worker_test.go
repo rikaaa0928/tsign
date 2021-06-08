@@ -15,9 +15,11 @@ func TestWorker(t *testing.T) {
 		wg.Add(1)
 		dm := v.DataMap()
 		a := v.a
+		v := v
 		go func() {
 			for _, d := range dm {
 				w.AsyncNotify(&workerData{d: d, act: a, f: func(showData ShowData) {
+					v.UpdateShowData(showData.Name, showData)
 					t.Log(showData)
 				}})
 				time.Sleep(time.Second)
