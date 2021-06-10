@@ -6,6 +6,10 @@ type workerData struct {
 	f   func(showData ShowData)
 }
 
+func NewWorker() *worker {
+	return &worker{c: make(chan *workerData)}
+}
+
 type worker struct {
 	c chan *workerData
 }
