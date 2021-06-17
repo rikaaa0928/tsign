@@ -30,6 +30,10 @@ func NewUser(a *account) *user {
 	return u
 }
 
+func (u *user) Account() account {
+	return *u.a
+}
+
 func (u *user) RefreshData() {
 	dm := u.dataMap.Load().(map[string]*data)
 	l, err := u.a.GetList()
@@ -66,10 +70,11 @@ func (u *user) FeedWorker(w *worker) {
 	log.Printf("dur %v, for user: %v, len(dataMap): %v", d, u.a.name, len(dm))
 	ticker := time.Tick(d)
 	for _, v := range dm {
-		<-ticker
 		w.AsyncNotify(&workerData{d: v, act: u.a, f: func(showData ShowData) {
 			u.UpdateShowData(showData.Name, showData)
+			log.Println(showData)
 		}})
+		<-ticker
 	}
 }
 
@@ -81,7 +86,7 @@ type UserMgr struct {
 func (u *UserMgr) Refresh() {
 	dir, err := ioutil.ReadDir(u.path)
 	if err != nil {
-		log.Fatalln(err)
+		log.Println(err)
 		return
 	}
 	wg := sync.WaitGroup{}

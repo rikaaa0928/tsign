@@ -1,20 +1,25 @@
 package main
 
 import (
+	"flag"
 	"sync"
 	"sync/atomic"
 	"time"
 
+	"github.com/rikaaa0928/tsign/web"
 	"github.com/rikaaa0928/tsign/worker"
 )
 
 func main() {
+	configPath := flag.String("c", "/etc/tsign", "path to cookies")
+	port := flag.Int("p", 60080, "port of dashboard")
+	flag.Parse()
 	lastDay := time.Now().Day()
 	w := worker.NewWorker()
 	w.AsyncGo()
-	um := atomic.Value{}
-	//u := worker.NewUserManager("../test")
-	um.Store(worker.NewUserManager("./test"))
+	um := &atomic.Value{}
+	go web.Start(um, *port)
+	um.Store(worker.NewUserManager(*configPath))
 	go func() {
 		for {
 			u := um.Load().(*worker.UserMgr)
@@ -41,7 +46,7 @@ func main() {
 		now := time.Now()
 		if now.Day() != lastDay {
 			lastDay = now.Day()
-			um.Store(worker.NewUserManager("./test"))
+			um.Store(worker.NewUserManager(*configPath))
 		}
 	}
 }
