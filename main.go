@@ -14,7 +14,11 @@ func main() {
 	configPath := flag.String("c", "/etc/tsign", "path to cookies")
 	port := flag.Int("p", 60080, "port of dashboard")
 	flag.Parse()
-	lastDay := time.Now().Day()
+	timeZone, err := time.LoadLocation("Asia/Shanghai")
+	if err != nil {
+		timeZone = time.Local
+	}
+	lastDay := time.Now().In(timeZone).Day()
 	w := worker.NewWorker()
 	w.AsyncGo()
 	um := &atomic.Value{}
