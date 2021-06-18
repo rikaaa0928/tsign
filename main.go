@@ -47,10 +47,6 @@ func main() {
 	ticker := time.Tick(time.Second)
 	for {
 		<-ticker
-		timeZone, err := time.LoadLocation("Asia/Shanghai")
-		if err != nil {
-			timeZone = time.Local
-		}
 		now := time.Now().In(timeZone)
 		if now.Day() != lastDay {
 			lastDay = now.Day()

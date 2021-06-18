@@ -31,12 +31,12 @@ func (h *web) HandleIndex(w http.ResponseWriter, r *http.Request) {
 	//getTime
 	ti := ""
 	location := ""
-	utc, err := time.LoadLocation("Asia/Shanghai")
+	timeZone, err := time.LoadLocation("Asia/Shanghai")
 	if err != nil {
 		log.Printf("err: \n", err.Error())
 		ti = err.Error()
 	} else {
-		tt := time.Now().In(utc)
+		tt := time.Now().In(timeZone)
 		location = tt.Location().String()
 		ti = tt.Format("2006-01-02 15:04:05")
 	}
