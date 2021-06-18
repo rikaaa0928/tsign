@@ -80,7 +80,7 @@ func (h *web) HandleIndex(w http.ResponseWriter, r *http.Request) {
 	for _, x1 := range um {
 		x1.ShowMap().Range(func(key, value interface{}) bool {
 			in.Counts++
-			if value.(worker.ShowData).Done || value.(worker.ShowData).Tried <= 1 {
+			if value.(worker.ShowData).Done || value.(worker.ShowData).Tried == 0 {
 				return true
 			}
 			in.Errors++
@@ -143,7 +143,7 @@ func indexBody(umgr *worker.UserMgr) (b string) {
 		n := 0
 		m := 0
 		v.ShowMap().Range(func(_, value interface{}) bool {
-			if value.(worker.ShowData).Done || value.(worker.ShowData).Tried <= 1 {
+			if value.(worker.ShowData).Done {
 				n++
 			}
 			m++

@@ -99,32 +99,41 @@ func Sign(a *account, d *data) (r ShowData) {
 		return
 	}
 	o1, ok := m["user_info"]
-	if !ok {
-		r.Stat = "error response structure user_info: " + string(body)
-		return
-	}
-	m1, ok := o1.(map[string]interface{})
-	if !ok {
-		r.Stat = "error response structure user_info map: " + string(body)
-		return
-	}
-	expInt, ok := m1["sign_bonus_point"]
 	if ok {
-		expStr, ok := expInt.(string)
+		m1, ok := o1.(map[string]interface{})
 		if !ok {
-			r.Stat = "error response structure sign_bonus_point string: " + string(body)
+			r.Stat = "error response structure user_info map: " + string(body)
 			return
 		}
-		_, err = strconv.Atoi(expStr)
-		if err != nil {
-			r.Stat = "error response structure sign_bonus_point int: " + string(body)
+		expInt, ok := m1["sign_bonus_point"]
+		if ok {
+			expStr, ok := expInt.(string)
+			if !ok {
+				r.Stat = "error response structure sign_bonus_point string: " + string(body)
+				return
+			}
+			_, err = strconv.Atoi(expStr)
+			if err != nil {
+				r.Stat = "error response structure sign_bonus_point int: " + string(body)
+				return
+			}
+			d.done = true
+			r.Stat = "done and get exp: " + expStr
 			return
 		}
-		d.done = true
-		r.Stat = "done and get exp: " + expStr
+	}
+	errCode, ok := m["error_code"]
+	if !ok {
+		r.Stat = "error response structure: " + string(body)
 		return
 	}
-	r.Stat = fmt.Sprintf("error code: %v, error msg: %v", m["error_code"], m["error_msg"])
+	errCodeStr, ok := errCode.(string)
+	if ok && errCodeStr == "160002" {
+		r.Stat = "done."
+		d.done = true
+		return
+	}
+	r.Stat = fmt.Sprintf("error code: %s, error msg: %s", m["error_code"], m["error_msg"])
 	return
 }
 
@@ -133,4 +142,12 @@ func ToUtf8(gbkString string) string {
 	O := transform.NewReader(I, simplifiedchinese.GBK.NewDecoder())
 	d, _ := ioutil.ReadAll(O)
 	return string(d)
+}
+
+func Unicode2ZHCN(unicode string) string {
+	str, err := strconv.Unquote(strings.Replace(strconv.Quote(unicode), `\\u`, `\u`, -1))
+	if err != nil {
+		return ""
+	}
+	return str
 }
