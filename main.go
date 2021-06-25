@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"sync"
 	"sync/atomic"
@@ -9,6 +10,34 @@ import (
 	"github.com/rikaaa0928/tsign/web"
 	"github.com/rikaaa0928/tsign/worker"
 )
+
+func work(um *atomic.Value, w *worker.Worker, c <-chan struct{}) {
+	for {
+		u := um.Load().(*worker.UserMgr)
+		wg := sync.WaitGroup{}
+		wg.Add(1)
+		var once sync.Once
+		ctx, cancel := context.WithCancel(context.Background())
+		go func() {
+			<-c
+			cancel()
+			once.Do(func() {
+				wg.Done()
+			})
+		}()
+		for _, v := range u.UserMap() {
+			v := v
+			go func() {
+				v.FeedWorker(ctx, w)
+				time.Sleep(time.Minute * 30)
+				once.Do(func() {
+					wg.Done()
+				})
+			}()
+		}
+		wg.Wait()
+	}
+}
 
 func main() {
 	configPath := flag.String("c", "/etc/tsign", "path to cookies")
@@ -24,25 +53,8 @@ func main() {
 	um := &atomic.Value{}
 	go web.Start(um, *port)
 	um.Store(worker.NewUserManager(*configPath))
-	go func() {
-		for {
-			u := um.Load().(*worker.UserMgr)
-			wg := sync.WaitGroup{}
-			wg.Add(1)
-			var once sync.Once
-			for _, v := range u.UserMap() {
-				v := v
-				go func() {
-					v.FeedWorker(w)
-					time.Sleep(time.Minute * 30)
-					once.Do(func() {
-						wg.Done()
-					})
-				}()
-			}
-			wg.Wait()
-		}
-	}()
+	c := make(chan struct{})
+	go work(um, w, c)
 
 	ticker := time.Tick(time.Second)
 	for {
@@ -51,6 +63,7 @@ func main() {
 		if now.Day() != lastDay {
 			lastDay = now.Day()
 			um.Store(worker.NewUserManager(*configPath))
+			c <- struct{}{}
 		}
 	}
 }

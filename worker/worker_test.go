@@ -7,7 +7,7 @@ import (
 )
 
 func TestWorker(t *testing.T) {
-	w := &worker{c: make(chan *workerData)}
+	w := &Worker{c: make(chan *workerData)}
 	w.AsyncGo()
 	u := NewUserManager("../test")
 	wg := sync.WaitGroup{}

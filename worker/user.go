@@ -1,6 +1,7 @@
 package worker
 
 import (
+	"context"
 	"io/ioutil"
 	"log"
 	"path"
@@ -60,7 +61,7 @@ func (u *user) UpdateShowData(key string, showData ShowData) {
 	u.showMap.Store(key, showData)
 }
 
-func (u *user) FeedWorker(w *worker) {
+func (u *user) FeedWorker(ctx context.Context, w *Worker) {
 	dm := u.dataMap.Load().(map[string]*data)
 	dur := float64(time.Hour*20) / (float64(time.Second) * float64(len(dm)*4))
 	if dur < 1.0 {
@@ -69,7 +70,14 @@ func (u *user) FeedWorker(w *worker) {
 	d := time.Duration(dur * float64(time.Second))
 	log.Printf("dur %v, for user: %v, len(dataMap): %v", d, u.a.name, len(dm))
 	ticker := time.Tick(d)
+L1:
 	for _, v := range dm {
+		select {
+		case <-ctx.Done():
+			break L1
+		default:
+
+		}
 		w.AsyncNotify(&workerData{d: v, act: u.a, f: func(showData ShowData) {
 			u.UpdateShowData(showData.Name, showData)
 			log.Println(showData)

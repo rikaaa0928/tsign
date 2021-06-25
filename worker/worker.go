@@ -6,11 +6,11 @@ type workerData struct {
 	f   func(showData ShowData)
 }
 
-func NewWorker() *worker {
-	return &worker{c: make(chan *workerData)}
+func NewWorker() *Worker {
+	return &Worker{c: make(chan *workerData)}
 }
 
-type worker struct {
+type Worker struct {
 	c chan *workerData
 }
 
@@ -21,21 +21,21 @@ func (w *workerData) Do() {
 	}
 }
 
-func (w *worker) SyncGo() {
+func (w *Worker) SyncGo() {
 	for {
 		d := <-w.c
 		go d.Do()
 	}
 }
 
-func (w *worker) AsyncGo() {
+func (w *Worker) AsyncGo() {
 	go w.SyncGo()
 }
 
-func (w *worker) AsyncNotify(d *workerData) {
+func (w *Worker) AsyncNotify(d *workerData) {
 	go w.SyncNotify(d)
 }
 
-func (w *worker) SyncNotify(d *workerData) {
+func (w *Worker) SyncNotify(d *workerData) {
 	w.c <- d
 }
