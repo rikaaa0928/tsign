@@ -2,6 +2,7 @@ package worker
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -15,6 +16,7 @@ import (
 	"github.com/rikaaa0928/tsign/functions"
 	"golang.org/x/text/encoding/simplifiedchinese"
 	"golang.org/x/text/transform"
+	"google.golang.org/api/idtoken"
 )
 
 func Fetch(targetUrl string, postData map[string]string, ptrCookieJar *cookiejar.Jar) ([]byte, error) {
@@ -36,6 +38,37 @@ func Fetch(targetUrl string, postData map[string]string, ptrCookieJar *cookiejar
 		request.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 	}
 	response, fetchError := httpClient.Do(request)
+	if fetchError != nil {
+		return nil, fetchError
+	}
+	defer response.Body.Close()
+	body, readError := ioutil.ReadAll(response.Body)
+	if readError != nil {
+		return nil, readError
+	}
+	return body, nil
+}
+
+func gcpFunc(targetURL string, postData map[string]string) ([]byte, error) {
+	var request *http.Request
+	client, err := idtoken.NewClient(context.Background(), targetURL)
+	if err != nil {
+		return nil, fmt.Errorf("idtoken.NewClient: %v", err)
+	}
+	if nil == postData {
+		request, _ = http.NewRequest("GET", targetURL, nil)
+	} else {
+		postParams := url.Values{}
+		for key, value := range postData {
+			postParams.Set(key, value)
+		}
+		postDataStr := postParams.Encode()
+		postDataBytes := []byte(postDataStr)
+		postBytesReader := bytes.NewReader(postDataBytes)
+		request, _ = http.NewRequest("POST", targetURL, postBytesReader)
+		request.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+	}
+	response, fetchError := client.Do(request)
 	if fetchError != nil {
 		return nil, fetchError
 	}
@@ -100,7 +133,7 @@ func Sign(a *account, d *data) (r ShowData) {
 	pData := make(map[string]string)
 	pData["data"] = string(postBytes)
 
-	body, fetchErr := Fetch(os.Getenv("SIGN_FUNC"), pData, a.cookieJar)
+	body, fetchErr := gcpFunc(os.Getenv("SIGN_FUNC"), pData)
 	if fetchErr != nil {
 		r.Stat = fetchErr.Error()
 		return
