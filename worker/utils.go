@@ -13,7 +13,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/rikaaa0928/tsign/functions"
+	functions "github.com/rikaaa0928/tsign_function"
 	"golang.org/x/text/encoding/simplifiedchinese"
 	"golang.org/x/text/transform"
 	"google.golang.org/api/idtoken"
