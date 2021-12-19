@@ -5,4 +5,5 @@ go 1.16
 require (
 	github.com/GoogleCloudPlatform/functions-framework-go v1.5.2
 	golang.org/x/text v0.3.6
+	google.golang.org/api v0.57.0
 )

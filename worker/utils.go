@@ -2,18 +2,17 @@ package worker
 
 import (
 	"bytes"
-	"crypto/md5"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/http/cookiejar"
 	"net/url"
-	"sort"
+	"os"
 	"strconv"
 	"strings"
 
+	"github.com/rikaaa0928/tsign/functions"
 	"golang.org/x/text/encoding/simplifiedchinese"
 	"golang.org/x/text/transform"
 )
@@ -56,43 +55,59 @@ func Sign(a *account, d *data) (r ShowData) {
 	r.Exp = d.exp
 	r.Tried = d.tried
 	r.Name = ToUtf8(d.name)
-	postData := make(map[string]string)
-	postData["BDUSS"] = a.GetCookie("BDUSS")
-	postData["_client_id"] = "03-00-DA-59-05-00-72-96-06-00-01-00-04-00-4C-43-01-00-34-F4-02-00-BC-25-09-00-4E-36"
-	postData["_client_type"] = "4"
-	postData["_client_version"] = "1.2.1.17"
-	postData["_phone_imei"] = "540b43b59d21b7a4824e1fd31b08e9a6"
-	postData["fid"] = fmt.Sprintf("%d", d.id)
-	postData["kw"] = d.name
-	postData["net_type"] = "3"
-	postData["tbs"] = a.GetTBS()
-
-	var keys []string
-	for key := range postData {
-		keys = append(keys, key)
+	//postData := make(map[string]string)
+	//postData["BDUSS"] = a.GetCookie("BDUSS")
+	//postData["_client_id"] = "03-00-DA-59-05-00-72-96-06-00-01-00-04-00-4C-43-01-00-34-F4-02-00-BC-25-09-00-4E-36"
+	//postData["_client_type"] = "4"
+	//postData["_client_version"] = "1.2.1.17"
+	//postData["_phone_imei"] = "540b43b59d21b7a4824e1fd31b08e9a6"
+	//postData["fid"] = fmt.Sprintf("%d", d.id)
+	//postData["kw"] = d.name
+	//postData["net_type"] = "3"
+	//postData["tbs"] = a.GetTBS()
+	//
+	//var keys []string
+	//for key := range postData {
+	//	keys = append(keys, key)
+	//}
+	//sort.Sort(sort.StringSlice(keys))
+	//
+	//sign_str := ""
+	//for _, key := range keys {
+	//	sign_str += fmt.Sprintf("%s=%s", key, postData[key])
+	//}
+	//sign_str += "tiebaclient!!!"
+	//MD5 := md5.New()
+	//MD5.Write([]byte(sign_str))
+	//MD5Result := MD5.Sum(nil)
+	//signValue := make([]byte, 32)
+	//hex.Encode(signValue, MD5Result)
+	//postData["sign"] = strings.ToUpper(string(signValue))
+	//
+	//body, fetchErr := Fetch("http://c.tieba.baidu.com/c/c/forum/sign", postData, a.cookieJar)
+	//
+	//fmt.Printf("%d,%d,%s\n", len(d.name), len(ToUtf8(d.name)), ToUtf8(d.name))
+	post := functions.SignData{
+		Cookies: a.Cookies,
+		ID:      d.id,
+		Name:    ToUtf8(d.name),
 	}
-	sort.Sort(sort.StringSlice(keys))
-
-	sign_str := ""
-	for _, key := range keys {
-		sign_str += fmt.Sprintf("%s=%s", key, postData[key])
+	postBytes, err := json.Marshal(post)
+	if err != nil {
+		r.Stat = err.Error()
+		return
 	}
-	sign_str += "tiebaclient!!!"
+	pData := make(map[string]string)
+	pData["data"] = string(postBytes)
 
-	MD5 := md5.New()
-	MD5.Write([]byte(sign_str))
-	MD5Result := MD5.Sum(nil)
-	signValue := make([]byte, 32)
-	hex.Encode(signValue, MD5Result)
-	postData["sign"] = strings.ToUpper(string(signValue))
-
-	body, fetchErr := Fetch("http://c.tieba.baidu.com/c/c/forum/sign", postData, a.cookieJar)
+	body, fetchErr := Fetch(os.Getenv("SIGN_FUNC"), pData, a.cookieJar)
 	if fetchErr != nil {
 		r.Stat = fetchErr.Error()
 		return
 	}
 	m := make(map[string]interface{})
-	err := json.Unmarshal(body, &m)
+	err = json.Unmarshal(body, &m)
+	//fmt.Println(string(body))
 	//json, parseErr := NewJson([]byte(body))
 	if err != nil {
 		r.Stat = err.Error()

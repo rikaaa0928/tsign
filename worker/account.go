@@ -20,6 +20,7 @@ type account struct {
 	cookieJar *cookiejar.Jar
 	valid     bool
 	name      string
+	Cookies   []*http.Cookie
 }
 
 func NewAcount(file string) *account {
@@ -52,6 +53,7 @@ func NewAcount(file string) *account {
 				Domain: ".baidu.com",
 			})
 		}
+		u.Cookies = cookies
 		log.Printf("Verifying imported cookies from %s...", file)
 		URL, _ := url.Parse("http://baidu.com")
 		u.cookieJar.SetCookies(URL, cookies)
