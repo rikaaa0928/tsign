@@ -63,7 +63,7 @@ func (u *user) UpdateShowData(key string, showData ShowData) {
 
 func (u *user) FeedWorker(ctx context.Context, w *Worker) {
 	dm := u.dataMap.Load().(map[string]*data)
-	dur := float64(time.Hour*20) / (float64(time.Second) * float64(len(dm)*4))
+	dur := float64(time.Hour*20) / (float64(time.Second) * float64(len(dm)*2))
 	if dur < 1.0 {
 		dur = 1.0
 	}
